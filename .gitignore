@@ -1,0 +1,26 @@
+# Arquivos de build do PyInstaller
+build/
+dist/
+*.spec
+
+# Cache do Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Logs e temporários
+*.log
+*.tmp
+
+# Configurações de ambiente e IDEs
+.env
+.venv/
+.vscode/
+.idea/
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Executáveis gerados
+*.exe
