@@ -76,7 +76,13 @@ def salvar_excel_formatado(df, caminho_saida):
                     cell.number_format = money_format
 
                     if cell.column_letter == 'C':
-                            if cell.value < 0:
+                            descricao_val = ws.cell(row=cell.row, column=2).value
+                            is_resgate = descricao_val and str(descricao_val).strip().upper() == "RESG.APLIC.FIN.AVISO PREV CAPTACAO"
+                            
+                            if is_resgate:
+                                # Neutro para resgates
+                                cell.fill = main_body_fill
+                            elif cell.value < 0:
                                 # Vermelho suave para saídas
                                 cell.fill = PatternFill(start_color="F8CBAD", end_color="F8CBAD", fill_type="solid")
                             else:
