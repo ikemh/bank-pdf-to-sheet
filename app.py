@@ -83,15 +83,34 @@ def salvar_excel_formatado(df, caminho_saida):
                                 # Verde suave para entradas
                                 cell.fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
 
-    # Prepara os dados para as colunas independentes de Entrada e Saída
-    # "Entrada" = valores > 0; "Saída" = valores negativos (em valor absoluto)
-    entradas = [v for v in df["Valor (R$)"] if v > 0]
-    saidas = [-v for v in df["Valor (R$)"] if v < 0]
+    # Prepara os dados para as colunas independentes de Entrada, Saída e Resgates
+    DESCRICAO_RESGATE = "RESG.APLIC.FIN.AVISO PREV CAPTACAO"
+    
+    resgates = [
+        row["Valor (R$)"]
+        for _, row in df.iterrows()
+        if row["Descrição"].strip().upper() == DESCRICAO_RESGATE
+    ]
+
+    entradas = [
+        row["Valor (R$)"]
+        for _, row in df.iterrows()
+        if row["Valor (R$)"] > 0
+        and row["Descrição"].strip().upper() != DESCRICAO_RESGATE
+    ]
+
+    saidas = [
+        -row["Valor (R$)"]
+        for _, row in df.iterrows()
+        if row["Valor (R$)"] < 0
+        and row["Descrição"].strip().upper() != DESCRICAO_RESGATE
+    ]
 
     # Posição inicial para colunas extras (duas colunas à direita da tabela principal, com 1 coluna de espaço)
     extra_start_col = main_table_cols + 2
     col_entrada_letter = get_column_letter(extra_start_col)
     col_saida_letter   = get_column_letter(extra_start_col + 1)
+    col_resgate_letter = get_column_letter(extra_start_col + 2)
     
     # Estilos para as colunas extras
     extra_header_fill = PatternFill(start_color="C6E0B4", end_color="C6E0B4", fill_type="solid")
@@ -101,14 +120,15 @@ def salvar_excel_formatado(df, caminho_saida):
     # Cabeçalhos das colunas extras
     ws[f"{col_entrada_letter}1"] = "Entrada (R$)"
     ws[f"{col_saida_letter}1"] = "Saída (R$)"
-    for col in (f"{col_entrada_letter}1", f"{col_saida_letter}1"):
+    ws[f"{col_resgate_letter}1"] = "Resgates (R$)"
+    for col in (f"{col_entrada_letter}1", f"{col_saida_letter}1", f"{col_resgate_letter}1"):
         ws[col].font = header_font
         ws[col].alignment = center_align
         ws[col].fill = extra_header_fill
         ws[col].border = thin_border
 
-    # Escreve os valores de Entrada e Saída, de forma corrida (sem preencher com zeros)
-    max_rows = max(len(entradas), len(saidas))
+    # Escreve os valores de Entrada, Saída e Resgates, de forma corrida (sem preencher com zeros)
+    max_rows = max(len(entradas), len(saidas), len(resgates))
     for i in range(max_rows):
         row_idx = i + 2  # Inicia na linha 2
         if i < len(entradas):
@@ -125,34 +145,33 @@ def salvar_excel_formatado(df, caminho_saida):
             cell_saida.alignment = center_align
             cell_saida.fill = extra_body_fill
             cell_saida.border = thin_border
+        if i < len(resgates):
+            cell_resgate = ws[f"{col_resgate_letter}{row_idx}"]
+            cell_resgate.value = resgates[i]
+            cell_resgate.number_format = money_format
+            cell_resgate.alignment = center_align
+            cell_resgate.fill = extra_body_fill
+            cell_resgate.border = thin_border
 
     # Adiciona rodapé (footer) com total de cada coluna extra
     footer_row = max_rows + 2
-    ws[f"{col_entrada_letter}{footer_row}"] = "Total"
-    ws[f"{col_entrada_letter}{footer_row}"].font = header_font
-    ws[f"{col_entrada_letter}{footer_row}"].alignment = center_align
-    ws[f"{col_entrada_letter}{footer_row}"].fill = extra_footer_fill
-    ws[f"{col_entrada_letter}{footer_row}"].border = thin_border
+    for col_letter, total_val in [
+        (col_entrada_letter, sum(entradas)), 
+        (col_saida_letter, sum(saidas)), 
+        (col_resgate_letter, sum(resgates))
+    ]:
+        ws[f"{col_letter}{footer_row}"] = "Total"
+        ws[f"{col_letter}{footer_row}"].font = header_font
+        ws[f"{col_letter}{footer_row}"].alignment = center_align
+        ws[f"{col_letter}{footer_row}"].fill = extra_footer_fill
+        ws[f"{col_letter}{footer_row}"].border = thin_border
 
-    ws[f"{col_saida_letter}{footer_row}"] = "Total"
-    ws[f"{col_saida_letter}{footer_row}"].font = header_font
-    ws[f"{col_saida_letter}{footer_row}"].alignment = center_align
-    ws[f"{col_saida_letter}{footer_row}"].fill = extra_footer_fill
-    ws[f"{col_saida_letter}{footer_row}"].border = thin_border
-
-    ws[f"{col_entrada_letter}{footer_row + 1}"] = sum(entradas)
-    ws[f"{col_entrada_letter}{footer_row + 1}"].number_format = money_format
-    ws[f"{col_entrada_letter}{footer_row + 1}"].font = header_font
-    ws[f"{col_entrada_letter}{footer_row + 1}"].alignment = center_align
-    ws[f"{col_entrada_letter}{footer_row + 1}"].fill = extra_footer_fill
-    ws[f"{col_entrada_letter}{footer_row + 1}"].border = thin_border
-
-    ws[f"{col_saida_letter}{footer_row + 1}"] = sum(saidas)
-    ws[f"{col_saida_letter}{footer_row + 1}"].number_format = money_format
-    ws[f"{col_saida_letter}{footer_row + 1}"].font = header_font
-    ws[f"{col_saida_letter}{footer_row + 1}"].alignment = center_align
-    ws[f"{col_saida_letter}{footer_row + 1}"].fill = extra_footer_fill
-    ws[f"{col_saida_letter}{footer_row + 1}"].border = thin_border
+        ws[f"{col_letter}{footer_row + 1}"] = total_val
+        ws[f"{col_letter}{footer_row + 1}"].number_format = money_format
+        ws[f"{col_letter}{footer_row + 1}"].font = header_font
+        ws[f"{col_letter}{footer_row + 1}"].alignment = center_align
+        ws[f"{col_letter}{footer_row + 1}"].fill = extra_footer_fill
+        ws[f"{col_letter}{footer_row + 1}"].border = thin_border
 
     # Ajuste automático da largura das colunas para acomodar o conteúdo
     for col in ws.columns:
