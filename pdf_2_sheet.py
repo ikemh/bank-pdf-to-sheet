@@ -61,109 +61,136 @@ def salvar_excel_formatado(df, caminho_saida, saldo_anterior=None):
     for row_idx in range(2, main_table_end + 1):
         ws[f"E{row_idx}"] = f'=IF(UPPER(TRIM(B{row_idx}))="RESG.APLIC.FIN.AVISO PREV CAPTACAO","Resgate",IF(C{row_idx}>0,"Entrada",IF(C{row_idx}<0,"Saída","")))'
 
-    main_table_cols = 5 # A, B, C, D, E
-
-    # Estilos básicos
-    main_header_fill = PatternFill(start_color="D9E1F2", end_color="D9E1F2", fill_type="solid")
-    main_body_fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
-    header_font = Font(bold=True)
-    center_align = Alignment(horizontal="center")
-    thin_border = Border(
-        left=Side(style='thin', color='CCCCCC'),
-        right=Side(style='thin', color='CCCCCC'),
-        top=Side(style='thin', color='CCCCCC'),
-        bottom=Side(style='thin', color='CCCCCC'),
-    )
+    main_table_cols = 5
+    
+    # Fonts e Alinhamentos
+    header_font_white = Font(bold=True, color="FFFFFF")
+    bold_font = Font(bold=True)
+    center_align = Alignment(horizontal="center", vertical="center")
+    left_align = Alignment(horizontal="left", vertical="center")
+    right_align = Alignment(horizontal="right", vertical="center")
     money_format = u'R$ #,##0.00'
+    
+    # Bordas
+    thin_side = Side(style='thin', color='BFBFBF')
+    thick_side = Side(style='medium', color='595959')
+    
+    thin_border = Border(left=thin_side, right=thin_side, top=thin_side, bottom=thin_side)
+    header_border = Border(left=thin_side, right=thin_side, top=thick_side, bottom=thick_side)
+    
+    # Cores de Preenchimento (Elegantes)
+    main_header_fill = PatternFill(start_color="1F4E78", end_color="1F4E78", fill_type="solid") # Azul Escuro Profundo
+    main_body_fill_alt1 = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid") # Branco
+    main_body_fill_alt2 = PatternFill(start_color="EDF2F9", end_color="EDF2F9", fill_type="solid") # Azul Muito Claro
+    
+    col_entrada_header = PatternFill(start_color="375623", end_color="375623", fill_type="solid") # Verde Escuro
+    col_entrada_body = PatternFill(start_color="E2EFDA", end_color="E2EFDA", fill_type="solid")   # Verde Pastel
+    
+    col_saida_header = PatternFill(start_color="C00000", end_color="C00000", fill_type="solid")   # Vermelho Escuro
+    col_saida_body = PatternFill(start_color="FCE4D6", end_color="FCE4D6", fill_type="solid")     # Vermelho Pastel
+    
+    col_resgate_header = PatternFill(start_color="843C0C", end_color="843C0C", fill_type="solid") # Laranja Escuro / Marrom
+    col_resgate_body = PatternFill(start_color="FFF2CC", end_color="FFF2CC", fill_type="solid")   # Amarelo Pastel
+    
+    conf_header_fill = PatternFill(start_color="44546A", end_color="44546A", fill_type="solid")   # Grafite
+    conf_body_fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")     # Cinza Claro
 
-    # Aplica estilos na tabela principal
+    # Aplica estilos na tabela principal (com Zebrado)
     for row in ws.iter_rows(min_row=1, max_row=main_table_end, max_col=main_table_cols):
+        is_even = row[0].row % 2 == 0
+        row_fill = main_body_fill_alt1 if is_even else main_body_fill_alt2
+        
         for cell in row:
-            cell.alignment = center_align
-            cell.border = thin_border
-            if cell.row == 1:
-                cell.font = header_font
-                cell.fill = main_header_fill
+            if cell.column_letter == 'B':
+                cell.alignment = left_align
             else:
-                cell.fill = main_body_fill
+                cell.alignment = center_align
+                
+            if cell.row == 1:
+                cell.font = header_font_white
+                cell.fill = main_header_fill
+                cell.border = header_border
+            else:
+                cell.border = thin_border
+                cell.fill = row_fill
                 if cell.column_letter in ['C', 'D']:
                     cell.number_format = money_format
-                
-                # Cores dinâmicas na coluna C baseadas na descrição
-                if cell.column_letter == 'C':
-                    descricao_val = ws.cell(row=cell.row, column=2).value
-                    is_resgate = descricao_val and str(descricao_val).strip().upper() == "RESG.APLIC.FIN.AVISO PREV CAPTACAO"
-                    if is_resgate:
-                        cell.fill = main_body_fill
-                    elif cell.value is not None and cell.value < 0:
-                        cell.fill = PatternFill(start_color="F8CBAD", end_color="F8CBAD", fill_type="solid")
-                    elif cell.value is not None and cell.value > 0:
-                        cell.fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
+
+    # Formatação Condicional VIVA na coluna C (Valor)
+    from openpyxl.formatting.rule import FormulaRule, CellIsRule
+    red_fill = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
+    red_font = Font(color="9C0006")
+    green_fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
+    green_font = Font(color="006100")
+    
+    ws.conditional_formatting.add(f'C2:C{main_table_end}', FormulaRule(formula=['$E2="Saída"'], stopIfTrue=True, fill=red_fill, font=red_font))
+    ws.conditional_formatting.add(f'C2:C{main_table_end}', FormulaRule(formula=['$E2="Entrada"'], stopIfTrue=True, fill=green_fill, font=green_font))
 
     # Congelar cabeçalho e AutoFilter
     ws.freeze_panes = "A2"
     ws.auto_filter.ref = f"A1:E{main_table_end}"
 
-    # Posição inicial para colunas extras (1 coluna em branco)
+    # Posição inicial para colunas extras
     extra_start_col = main_table_cols + 2
     col_entrada_letter = get_column_letter(extra_start_col)
     col_saida_letter   = get_column_letter(extra_start_col + 1)
     col_resgate_letter = get_column_letter(extra_start_col + 2)
     
-    # Estilos extras
-    extra_header_fill = PatternFill(start_color="C6E0B4", end_color="C6E0B4", fill_type="solid")
-    extra_body_fill = PatternFill(start_color="EFF7ED", end_color="EFF7ED", fill_type="solid")
-    extra_footer_fill = PatternFill(start_color="C6E0B4", end_color="C6E0B4", fill_type="solid")
+    headers_config = [
+        (col_entrada_letter, "Entrada (R$)", col_entrada_header, col_entrada_body),
+        (col_saida_letter, "Saída (R$)", col_saida_header, col_saida_body),
+        (col_resgate_letter, "Resgates (R$)", col_resgate_header, col_resgate_body)
+    ]
     
-    # Cabeçalhos extras
-    ws[f"{col_entrada_letter}1"] = "Entrada (R$)"
-    ws[f"{col_saida_letter}1"] = "Saída (R$)"
-    ws[f"{col_resgate_letter}1"] = "Resgates (R$)"
-    
-    for col_letter in (col_entrada_letter, col_saida_letter, col_resgate_letter):
-        ws[f"{col_letter}1"].font = header_font
+    # Cabeçalhos extras e Estilos
+    for col_letter, title, h_fill, b_fill in headers_config:
+        ws[f"{col_letter}1"] = title
+        ws[f"{col_letter}1"].font = header_font_white
         ws[f"{col_letter}1"].alignment = center_align
-        ws[f"{col_letter}1"].fill = extra_header_fill
-        ws[f"{col_letter}1"].border = thin_border
+        ws[f"{col_letter}1"].fill = h_fill
+        ws[f"{col_letter}1"].border = header_border
 
-    # Fórmulas de Entrada, Saída e Resgate linha por linha
+    # Fórmulas de Entrada, Saída e Resgate
     for row_idx in range(2, main_table_end + 1):
         ws[f"{col_entrada_letter}{row_idx}"] = f'=IF($E{row_idx}="Entrada",$C{row_idx},"")'
         ws[f"{col_saida_letter}{row_idx}"] = f'=IF($E{row_idx}="Saída",ABS($C{row_idx}),"")'
         ws[f"{col_resgate_letter}{row_idx}"] = f'=IF($E{row_idx}="Resgate",$C{row_idx},"")'
         
-        for col_letter in (col_entrada_letter, col_saida_letter, col_resgate_letter):
+        for col_letter, _, _, b_fill in headers_config:
             cell = ws[f"{col_letter}{row_idx}"]
             cell.number_format = money_format
             cell.alignment = center_align
-            cell.fill = extra_body_fill
+            cell.fill = b_fill
             cell.border = thin_border
 
-    # Totais (SUM)
+    # Totais (SUM) elegantes
     total_row = main_table_end + 2
-    for col_letter in (col_entrada_letter, col_saida_letter, col_resgate_letter):
+    for col_letter, _, h_fill, _ in headers_config:
         ws[f"{col_letter}{total_row - 1}"] = "Total"
-        ws[f"{col_letter}{total_row - 1}"].font = header_font
+        ws[f"{col_letter}{total_row - 1}"].font = header_font_white
         ws[f"{col_letter}{total_row - 1}"].alignment = center_align
-        ws[f"{col_letter}{total_row - 1}"].fill = extra_footer_fill
-        ws[f"{col_letter}{total_row - 1}"].border = thin_border
+        ws[f"{col_letter}{total_row - 1}"].fill = h_fill
+        ws[f"{col_letter}{total_row - 1}"].border = header_border
 
         ws[f"{col_letter}{total_row}"] = f"=SUM({col_letter}2:{col_letter}{main_table_end})"
         ws[f"{col_letter}{total_row}"].number_format = money_format
-        ws[f"{col_letter}{total_row}"].font = header_font
+        ws[f"{col_letter}{total_row}"].font = bold_font
         ws[f"{col_letter}{total_row}"].alignment = center_align
-        ws[f"{col_letter}{total_row}"].fill = extra_footer_fill
+        ws[f"{col_letter}{total_row}"].fill = conf_body_fill
         ws[f"{col_letter}{total_row}"].border = thin_border
 
     # Seção de Conferência do Balancete
-    conf_start_col = extra_start_col + 4 # Deixa uma coluna em branco
+    conf_start_col = extra_start_col + 4
     col_label_letter = get_column_letter(conf_start_col)
     col_val_letter = get_column_letter(conf_start_col + 1)
     
     conf_row = 2
-    # Título
+    # Título da Conferência
     ws[f"{col_label_letter}{conf_row}"] = "Conferência do Balancete"
-    ws[f"{col_label_letter}{conf_row}"].font = header_font
+    ws[f"{col_label_letter}{conf_row}"].font = header_font_white
+    ws[f"{col_label_letter}{conf_row}"].fill = conf_header_fill
+    ws[f"{col_label_letter}{conf_row}"].alignment = center_align
+    ws[f"{col_val_letter}{conf_row}"].fill = conf_header_fill
     ws.merge_cells(f"{col_label_letter}{conf_row}:{col_val_letter}{conf_row}")
     conf_row += 1
 
@@ -183,7 +210,13 @@ def salvar_excel_formatado(df, caminho_saida, saldo_anterior=None):
     conf_cells = {}
     for campo in campos:
         ws[f"{col_label_letter}{conf_row}"] = campo
-        ws[f"{col_label_letter}{conf_row}"].font = Font(bold=True)
+        ws[f"{col_label_letter}{conf_row}"].font = bold_font
+        ws[f"{col_label_letter}{conf_row}"].fill = conf_body_fill
+        ws[f"{col_label_letter}{conf_row}"].border = thin_border
+        
+        ws[f"{col_val_letter}{conf_row}"].fill = main_body_fill_alt1
+        ws[f"{col_val_letter}{conf_row}"].border = thin_border
+        
         conf_cells[campo] = f"{col_val_letter}{conf_row}"
         conf_row += 1
         
@@ -203,24 +236,40 @@ def salvar_excel_formatado(df, caminho_saida, saldo_anterior=None):
     # Formatação das células de conferência
     for campo, cel in conf_cells.items():
         cell = ws[cel]
-        cell.alignment = Alignment(horizontal="right")
+        cell.alignment = right_align
         if campo != "Status":
             cell.number_format = money_format
         else:
-            cell.font = Font(bold=True)
+            cell.font = bold_font
+            cell.alignment = center_align
 
-    # Ajuste automático da largura das colunas
+    # Bordas grossas envolta do balancete
+    for r_idx in range(2, conf_row):
+        ws[f"{col_label_letter}{r_idx}"].border = Border(left=thick_side, right=thin_side, top=ws[f"{col_label_letter}{r_idx}"].border.top, bottom=ws[f"{col_label_letter}{r_idx}"].border.bottom)
+        ws[f"{col_val_letter}{r_idx}"].border = Border(left=thin_side, right=thick_side, top=ws[f"{col_val_letter}{r_idx}"].border.top, bottom=ws[f"{col_val_letter}{r_idx}"].border.bottom)
+    
+    ws[f"{col_label_letter}2"].border = Border(left=thick_side, right=thin_side, top=thick_side, bottom=thin_side)
+    ws[f"{col_val_letter}2"].border = Border(left=thin_side, right=thick_side, top=thick_side, bottom=thin_side)
+    ws[f"{col_label_letter}{conf_row-1}"].border = Border(left=thick_side, right=thin_side, top=thin_side, bottom=thick_side)
+    ws[f"{col_val_letter}{conf_row-1}"].border = Border(left=thin_side, right=thick_side, top=thin_side, bottom=thick_side)
+
+    # Formatação Condicional para o Status
+    ws.conditional_formatting.add(conf_cells["Status"], CellIsRule(operator='equal', formula=['"OK"'], stopIfTrue=True, fill=green_fill, font=green_font))
+    ws.conditional_formatting.add(conf_cells["Status"], CellIsRule(operator='equal', formula=['"DIVERGENTE"'], stopIfTrue=True, fill=red_fill, font=red_font))
+
+    # Ajuste automático inteligente da largura das colunas
     for col in ws.columns:
         max_length = 0
         column = col[0].column_letter
         for cell in col:
             if cell.value is not None:
-                # Evita erro em fórmulas longas ao medir largura
                 val_str = str(cell.value)
                 if val_str.startswith('='):
                     val_str = "R$ 99.999,99"
                 max_length = max(max_length, len(val_str))
-        adjusted_width = max_length + 6
+        adjusted_width = max_length + 4
+        if column == 'B' and adjusted_width > 45: 
+            adjusted_width = 45 # Limite para descrição
         ws.column_dimensions[column].width = adjusted_width
 
     wb.save(caminho_saida)
