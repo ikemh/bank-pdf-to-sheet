@@ -1,3 +1,16 @@
+---
+title: Bank Pdf To Sheet
+emoji: 🏃
+colorFrom: blue
+colorTo: green
+sdk: gradio
+sdk_version: 6.13.0
+app_file: app.py
+pinned: false
+license: mit
+short_description: Conversor de extratos bancários em PDF para planilhas Excel
+---
+
 # Bank PDF to Sheet
 
 Conversor de extratos bancários em PDF para planilhas Excel (.xlsx), com foco atual no layout dos extratos do banco Sicredi.
