@@ -216,18 +216,46 @@ def process_pdf(pdf_path):
         raise gr.Error(f"Ocorreu um erro: {str(e)}")
 
 # Interface Gradio
-with gr.Blocks(title="Conversor de Extrato Bancário (PDF → Excel)") as app:
-    gr.Markdown("# 📊 Conversor de Extrato Bancário (PDF → Excel)")
-    gr.Markdown("Converta seus extratos bancários em PDF (foco no layout do Sicredi) para uma planilha Excel (.xlsx) formatada, com classificação de entradas/saídas e somatórios.")
-    
-    with gr.Row():
-        with gr.Column():
-            pdf_input = gr.File(label="📄 Selecione o PDF do Extrato", file_types=[".pdf"])
-            convert_btn = gr.Button("🔄 Converter para Excel", variant="primary")
-            
-        with gr.Column():
-            excel_output = gr.File(label="📥 Arquivo Excel Gerado", interactive=False)
-            
+tema = gr.themes.Soft(
+    primary_hue="emerald",
+    secondary_hue="blue",
+    neutral_hue="slate",
+    font=[gr.themes.GoogleFont('Inter'), 'ui-sans-serif', 'system-ui', 'sans-serif']
+)
+
+css = """
+h1 {text-align: center; color: #1f2937; margin-bottom: 0 !important;}
+.subtitle {text-align: center; color: #6b7280; font-size: 1.1rem; margin-top: 0.5rem; margin-bottom: 2rem;}
+.footer {text-align: center; margin-top: 3rem; color: #9ca3af; font-size: 0.875rem;}
+.container {max-width: 900px; margin: 0 auto; padding-top: 2rem;}
+"""
+
+with gr.Blocks(title="Conversor de Extrato Bancário", theme=tema, css=css) as app:
+    with gr.Column(elem_classes="container"):
+        gr.Markdown("# 📊 Conversor de Extratos para Excel")
+        gr.Markdown('<p class="subtitle">Transforme extratos em PDF do Sicredi em planilhas inteligentes com classificação de Entradas, Saídas e Resgates.</p>')
+        
+        with gr.Row(equal_height=True):
+            with gr.Column(scale=1, variant="panel"):
+                gr.Markdown("### 1. Envie seu PDF")
+                pdf_input = gr.File(
+                    label="Arraste ou clique para selecionar", 
+                    file_types=[".pdf"],
+                    file_count="single",
+                    height=200
+                )
+                convert_btn = gr.Button("🔄 Converter e Gerar Planilha", variant="primary", size="lg")
+                
+            with gr.Column(scale=1, variant="panel"):
+                gr.Markdown("### 2. Baixe o Excel")
+                excel_output = gr.File(
+                    label="Sua planilha aparecerá aqui", 
+                    interactive=False,
+                    height=200
+                )
+        
+        gr.Markdown('<p class="footer">🔐 <b>Privacidade:</b> Este utilitário não armazena seus dados. Todo o processamento é feito temporariamente e descartado imediatamente após a conversão.</p>')
+
     convert_btn.click(
         fn=process_pdf, 
         inputs=[pdf_input], 
